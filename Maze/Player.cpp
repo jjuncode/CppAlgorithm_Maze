@@ -8,7 +8,32 @@ void Player::Init(Board* board)
 	_pos = board->GetEnterPos();
 	_board = board;
 
-	Pos dest = board->GetExitPos();
+	BFS();
+}
+
+void Player::Update(uint64 deltaTick)
+{
+	if (idx < _path.size())
+	{
+		_pos = _path[idx];
+		++idx;
+
+		this_thread::sleep_for(1ms);
+	}
+}
+
+bool Player::CanGo(Pos pos)
+{
+	auto type = _board->GetTileType(pos);
+	if ( type == TileType::EMPTY ) 
+		return true;
+
+	return false;
+}
+
+void Player::RightHand()
+{
+	Pos dest = _board->GetExitPos();
 	Pos pos = _pos;
 	_dir = Dir::DOWN;
 
@@ -29,7 +54,7 @@ void Player::Init(Board* board)
 		// 우측이 갈 수 없으면, 현재 방향으로 1칸 전진
 		// 둘다 안되면 좌측 확인
 		// 다 안되면 뒤로감
-		
+
 		auto dir_right = (_dir + 1) % Dir::END;
 		auto dir_left = (_dir + 3) % Dir::END;
 
@@ -46,7 +71,7 @@ void Player::Init(Board* board)
 			pos = pos + MovePos[_dir];
 		}
 		// Go Left
-		else if ( CanGo(pos + MovePos[dir_left]))
+		else if (CanGo(pos + MovePos[dir_left]))
 		{
 			_dir = dir_left;
 			pos = pos + MovePos[_dir];
@@ -64,10 +89,10 @@ void Player::Init(Board* board)
 	}
 
 	stack<Pos> stack;
-	
+
 	// 경로를 따라감
 	// 경로를 갔는데, stack에 있는 경로라면 중복이라 pop ( 2칸차이 ) 
-	for (int i = 0; i < _path.size()-1; ++i)
+	for (int i = 0; i < _path.size() - 1; ++i)
 	{
 		if (stack.empty() == false && stack.top() == _path[i + 1])
 			stack.pop();
@@ -91,22 +116,67 @@ void Player::Init(Board* board)
 	_path = path;
 }
 
-void Player::Update(uint64 deltaTick)
+void Player::BFS()
 {
-	if (idx < _path.size())
+	Pos dest = _board->GetExitPos();
+	Pos pos = _pos;
+	_dir = Dir::DOWN;
+
+	Pos MovePos[Dir::END]
 	{
-		_pos = _path[idx];
-		++idx;
+		{ -1, 0 }, // UP
+		{ 0, 1 },  // RIGHT
+		{ 1, 0 },  // DOWN
+		{ 0, -1 }  // LEFT
+	};
 
-		this_thread::sleep_for(1ms);
+	const int32 size = _board->GetSize();
+	vector<vector<bool>> discovered(size, vector<bool>(size, false));
+
+	queue<Pos> q;
+	q.push(pos);
+	discovered[pos.y][pos.x] = true;
+
+	map<Pos, Pos> parent;	
+	parent[pos] = pos;	// 시작점
+
+	while (q.empty() == false)
+	{
+		pos = q.front();
+		q.pop();
+
+		if (pos == dest)
+			break;
+
+		for (int32 dir = 0; dir < 4; ++dir)
+		{
+			auto newPos = pos + MovePos[dir];
+			if (CanGo(newPos) == false)
+				continue;
+
+			if (discovered[newPos.y][newPos.x] == false)
+			{
+				q.push(newPos);
+				discovered[newPos.y][newPos.x] = true;
+				parent[newPos] = pos;
+			}
+		}
 	}
-}
 
-bool Player::CanGo(Pos pos)
-{
-	auto type = _board->GetTileType(pos);
-	if ( type == TileType::EMPTY ) 
-		return true;
+	_path.clear();
 
-	return false;
+	Pos start = dest;
+	Pos end = _board->GetEnterPos();
+
+	while (true)
+	{
+		_path.push_back(start);
+
+		if (start == end)
+			break;
+
+		start = parent[start];
+	}
+
+	std::reverse(_path.begin(), _path.end());
 }
