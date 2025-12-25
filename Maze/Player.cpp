@@ -8,17 +8,25 @@ void Player::Init(Board* board)
 	_pos = board->GetEnterPos();
 	_board = board;
 
-	BFS();
+	//BFS();
+	AStar();
 }
 
 void Player::Update(uint64 deltaTick)
 {
+	if (idx >= _path.size()) 
+	{
+		_board->GenerateMap();
+		Init(_board);
+	}
+
+
 	if (idx < _path.size())
 	{
 		_pos = _path[idx];
 		++idx;
 
-		this_thread::sleep_for(1ms);
+		this_thread::sleep_for(100ms);
 	}
 }
 
@@ -176,6 +184,118 @@ void Player::BFS()
 			break;
 
 		start = parent[start];
+	}
+
+	std::reverse(_path.begin(), _path.end());
+}
+
+struct PQNode
+{
+	bool operator < (const PQNode& other) const { return f < other.f; }
+	bool operator > (const PQNode& other) const { return f > other.f; }
+
+	int32 f;
+	int32 g;
+	Pos pos;
+};
+
+void Player::AStar()
+{
+	Pos start = _pos;
+	Pos dest = _board->GetExitPos();
+	_dir = Dir::DOWN;
+
+	enum
+	{
+		DIR_COUNT = 8
+	};
+
+	Pos MovePos[]
+	{
+		{ -1, 0 }, // UP
+		{ 0, 1 },  // RIGHT
+		{ 1, 0 },  // DOWN
+		{ 0, -1 },  // LEFT
+		{ -1, 1 }, // UP_RIGHT
+		{ 1, 1 },  // RIGHT_DOWN
+		{ 1, -1 },  // DOWN_LEFT
+		{ -1, -1 }  // LEFT_UP
+	};
+
+	int32 cost[] =
+	{
+		10,
+		10,
+		10,
+		10,
+		14,
+		14,
+		14,
+		14
+	};
+
+	const int32 size = _board->GetSize();
+
+	vector<vector<int32>> best_cost(size, vector<int32>(size, INT32_MAX));
+	map<Pos, Pos> parent;
+
+	priority_queue<PQNode, vector<PQNode>, greater<PQNode>> pq;
+
+	{
+		int32 g = 0;
+		int32 h = 10 * (abs(dest.y - start.y) + abs(dest.x - start.x));
+		pq.push(PQNode{ g + h, g, start });
+		best_cost[start.y][start.x] = g + h;
+		parent[start] = start;
+	}
+
+	while (pq.empty() == false)
+	{
+		PQNode node = pq.top();
+		pq.pop();
+
+		if (best_cost[node.pos.y][node.pos.x] < node.f)
+			continue;
+
+		if (node.pos == dest)
+			break;
+
+		for (int32 dir = 0; dir < DIR_COUNT; ++dir)
+		{
+			Pos nextPos = node.pos + MovePos[dir];
+
+			if (CanGo(nextPos) == false)
+				continue;
+
+			// 이미 방문한 곳이면 스킵하도록 코드 추가해도됨 
+
+			int32 g = node.g + cost[dir];
+			int32 h = 10 * (abs(dest.y - start.y) + abs(dest.x - start.x));
+
+			if (best_cost[nextPos.y][nextPos.x] <= g + h)
+				continue;
+
+			best_cost[nextPos.y][nextPos.x] = g + h;
+			pq.push(PQNode{ g + h,  g, nextPos });
+			parent[nextPos] = node.pos;
+		}
+	}
+
+
+	_path.clear();
+	idx = 0;
+
+	Pos s = dest;
+	Pos e = _board->GetEnterPos();
+
+	while (true)
+	{
+		_path.push_back(s);
+
+		if (s == e)
+			break;
+
+		s = parent[s];
 	}
 
 	std::reverse(_path.begin(), _path.end());

@@ -56,5 +56,5 @@ enum Dir : int32
 	DOWN,
 	LEFT,
 
-	END
+	END 
 };
