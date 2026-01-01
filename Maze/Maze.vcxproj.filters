@@ -24,6 +24,9 @@
     <ClCompile Include="Player.cpp">
       <Filter>Board</Filter>
     </ClCompile>
+    <ClCompile Include="Sorting.h">
+      <Filter>Main</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
