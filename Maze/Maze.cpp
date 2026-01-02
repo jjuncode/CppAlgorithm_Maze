@@ -23,3 +23,16 @@
 //		board.Render();
 //	}
 //}
+
+#include "Sorting.h"
+int main()
+{
+    vector<int> v{ 1,65,43,1,2,5,78,23,234,5,12 };
+    MergeSort(v, 0, v.size() - 1);
+
+    for (auto& _v : v)
+    {
+        cout << _v << " ";
+    }
+    cout << endl;
+}
