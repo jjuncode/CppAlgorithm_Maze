@@ -8,12 +8,23 @@ enum
 	BOARD_MAX_SIZE = 100
 };
 
-
 enum class TileType
 {
 	NONE = 0,
 	EMPTY,
 	WALL,
+};
+
+struct CostEdge
+{
+	int cost;
+	Pos u;
+	Pos v;
+
+	bool operator < (CostEdge& other)
+	{
+		return cost < other.cost;
+	}
 };
 
 class Board
